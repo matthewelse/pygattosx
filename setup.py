@@ -48,5 +48,10 @@ setup(
     license = "Apache-2.0",
     keywords = "ble",
     url = "about:blank",
-    packages = find_packages()
+    packages = find_packages(),
+    install_requires = [
+        'future',
+        'pyxpcconnection'
+    ],
+    dependency_links = ['https://github.com/matthewelse/pyxpcconnection/archive/master.zip#egg=xpcconnection']
 )
