@@ -19,3 +19,4 @@ from future.utils import bytes_to_native_str, native_str_to_bytes
 from future.builtins import int, bytes
 
 from .discover import DiscoveryService
+from .requester import GATTRequester
