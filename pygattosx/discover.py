@@ -39,7 +39,7 @@ class DiscoveryService(BLEBase):
             'appearance': 0
         }
 
-        self.discovered_devices = defaultdict(lambda: default_dict)
+        self.discovered_devices = defaultdict(lambda: default_dict.copy())
 
     def discoveredDevice(self, args):
         # discovered a device

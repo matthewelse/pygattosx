@@ -66,6 +66,8 @@ class GATTRequester(BLEBase):
 
     def onConnect(self, args):
         # The waiting is over!
+        print("Device Connected!")
+
         self.connected = True
         self.connect_event.set()
 

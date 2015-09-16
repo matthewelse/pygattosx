@@ -21,6 +21,7 @@ from future.builtins import int, bytes
 
 import time
 from threading import Event
+from collections import deque
 
 from xpcconnection import XpcConnection
 
@@ -29,6 +30,9 @@ class BLEBase(XpcConnection):
         super(BLEBase, self).__init__('com.apple.blued')
 
         self._events = {}
+
+        self.events = deque([])
+        self.event_happening = False
 
         self.registerEvent(6, self.adapterStateChanged)
         self.readyEvent = Event()
@@ -57,6 +61,8 @@ class BLEBase(XpcConnection):
 
         self.readyEvent.wait()
 
+        print("Bluetooth Ready")
+
     def registerEvent(self, id, func):
         self._events[id] = func
 
@@ -65,12 +71,20 @@ class BLEBase(XpcConnection):
         args = data['kCBMsgArgs']
 
         if msg_id in self._events:
-            self._events[msg_id](args)
+            self.schedule(self._events[msg_id], args)
         else:
-            pass
-            # print('unexpected event: %i' % msg_id)
-            # print(args)
+            print('unexpected event: %i' % msg_id)
+            print(args)
     
+
+    def schedule(self, event, args):
+        self.events.append((event, args))
+
+        if not self.event_happening:
+            for i in range(len(self.events)):
+                event, args = self.events.popleft()
+                event(args)
+
     def adapterStateChanged(self, args):
         # state changed
         STATE_TYPES = ['unknown', 'resetting', 'unsupported', 'unauthorized', 'poweredOff', 'poweredOn']
