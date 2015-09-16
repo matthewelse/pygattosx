@@ -20,7 +20,7 @@ from future.utils import bytes_to_native_str, native_str_to_bytes
 from future.builtins import int, bytes
 
 import time
-from threading import Event
+from threading import Event, Lock
 from collections import deque
 
 from xpcconnection import XpcConnection
@@ -33,6 +33,8 @@ class BLEBase(XpcConnection):
 
         self.events = deque([])
         self.event_happening = False
+
+        self.mutex = Lock()
 
         self.registerEvent(6, self.adapterStateChanged)
         self.readyEvent = Event()
@@ -61,8 +63,6 @@ class BLEBase(XpcConnection):
 
         self.readyEvent.wait()
 
-        print("Bluetooth Ready")
-
     def registerEvent(self, id, func):
         self._events[id] = func
 
@@ -70,20 +70,21 @@ class BLEBase(XpcConnection):
         msg_id = data['kCBMsgId']
         args = data['kCBMsgArgs']
 
-        if msg_id in self._events:
-            self.schedule(self._events[msg_id], args)
-        else:
-            print('unexpected event: %i' % msg_id)
-            print(args)
+        self.schedule(None if msg_id not in self._events else self._events[msg_id], args)
     
-
     def schedule(self, event, args):
         self.events.append((event, args))
 
         if not self.event_happening:
+            self.mutex.acquire()
+
             for i in range(len(self.events)):
                 event, args = self.events.popleft()
-                event(args)
+
+                if event is not None:
+                    event(args)
+
+            self.mutex.release()
 
     def adapterStateChanged(self, args):
         # state changed

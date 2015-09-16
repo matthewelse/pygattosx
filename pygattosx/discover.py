@@ -67,7 +67,7 @@ class DiscoveryService():
     def startScanning(self):
         scan_data = {
             'kCBMsgArgOptions': {
-                'kCBScanOptionAllowDuplicates': 1
+                'kCBScanOptionAllowDuplicates': 0
             },
             'kCBMsgArgUUIDs': []
         }

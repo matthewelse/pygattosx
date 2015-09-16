@@ -19,7 +19,10 @@ from __future__ import absolute_import
 from future.utils import bytes_to_native_str, native_str_to_bytes
 from future.builtins import int, bytes
 
+from copy import copy
 from threading import Event
+
+from bleep.util import BLEUUID
 
 from .wrapper import ble_base
 
@@ -32,6 +35,7 @@ class GATTRequester():
         ble_base.registerEvent(56, self.onDiscover)
         ble_base.registerEvent(64, self.onDiscoverCharacteristics)
         ble_base.registerEvent(71, self.onReadResponse)
+        ble_base.registerEvent(76, self.onDiscoverDescriptors)
         ble_base.registerEvent(79, self.onReadResponse)
 
         self.uuid = address
@@ -40,15 +44,24 @@ class GATTRequester():
         self.write_event = Event()
         self.connect_event = Event()
         self.discover_event = Event()
+        self.discover_desc_event = Event()
         self.disconnection_event = Event()
 
         if connect:
             self.connect()
 
+    def on_notification(self, handle, data):
+        pass
+
+    def on_indication(self, handle, data):
+        pass
+
     def is_connected(self):
         return self.connected
 
     def connect(self, block = True, channel_type = 'random', security = None, psm = 0, mtu = 0):
+        ble_base.mutex.acquire()
+
         connect_data = {
             'kCBMsgArgOptions': {
                 'kCBConnectOptionNotifyOnDisconnection': 1
@@ -59,13 +72,13 @@ class GATTRequester():
         self.connect_event.clear()
         ble_base.write(31, connect_data)
 
+        ble_base.mutex.release()
+
         if block:
             self.connect_event.wait()
-
+            
     def onConnect(self, args):
         # The waiting is over!
-        print("Device Connected!")
-
         self.connected = True
         self.connect_event.set()
 
@@ -87,11 +100,13 @@ class GATTRequester():
 
     def discover_primary(self):
         discover_data = {
-            'kCBMsgArgDeviceUUID': self.uuid
+            'kCBMsgArgDeviceUUID': self.uuid,
+            'kCBMsgArgUUIDs': []
         }
 
         self.discover_event.clear()
         ble_base.write(45, discover_data)
+
         self.discover_event.wait()
 
         return self._discoveredServices
@@ -100,8 +115,8 @@ class GATTRequester():
         self._discoveredServices = []
 
         if 'kCBMsgArgServices' in args:
-            for service in args['kCBMsgArgServices']:
-                uuid = UUID(service['kCBMsgArgUUID'])
+            for i, service in args['kCBMsgArgServices'].iteritems():
+                uuid = bytes(service['kCBMsgArgUUID'])
                 start = service['kCBMsgArgServiceStartHandle']
                 end = service['kCBMsgArgServiceEndHandle']
 
@@ -110,9 +125,11 @@ class GATTRequester():
                     'start': start,
                     'end': end
                 })
+
         self.discover_event.set()
 
     def discover_characteristics(self, start, end):
+        ble_base.mutex.acquire()
         discover_data = {
             'kCBMsgArgDeviceUUID': self.uuid,
             'kCBMsgArgServiceStartHandle': start,
@@ -122,6 +139,9 @@ class GATTRequester():
 
         self.discover_event.clear()
         ble_base.write(62, discover_data)
+
+        ble_base.mutex.release()
+
         self.discover_event.wait()
 
         return self._discoveredCharacteristics
@@ -131,13 +151,13 @@ class GATTRequester():
 
         self._discoveredCharacteristics = []
 
-        for char in chars:
-            uuid = UUID(bytes=char['kCBMsgArgUUID'])
+        for i, char in chars.iteritems():
+            uuid = bytes(char['kCBMsgArgUUID'])
             handle = char['kCBMsgArgCharacteristicHandle']
             valueHandle = char['kCBMsgArgCharacteristicValueHandle']
             properties = char['kCBMsgArgCharacteristicProperties']
 
-            chars.append({
+            self._discoveredCharacteristics.append({
                 'uuid': uuid,
                 'handle': handle,
                 'value_handle': valueHandle,
@@ -145,6 +165,39 @@ class GATTRequester():
             })
 
         self.discover_event.set()
+
+    def discover_descriptors(self, start, end):
+        ble_base.mutex.acquire()
+        discover_data = {
+            'kCBMsgArgDeviceUUID': self.uuid,
+            'kCBMsgArgCharacteristicHandle': start - 2,
+            'kCBMsgArgCharacteristicValueHandle': start - 1
+        }
+
+        self.discover_desc_event.clear()
+        ble_base.write(70, discover_data)
+
+        ble_base.mutex.release()
+
+        self.discover_desc_event.wait()
+
+        return self._discoveredDescriptors
+
+    def onDiscoverDescriptors(self, args):
+        chars = args['kCBMsgArgDescriptors']
+
+        self._discoveredDescriptors = []
+
+        for i, char in chars.iteritems():
+            uuid = bytes(char['kCBMsgArgUUID'])
+            handle = char['kCBMsgArgDescriptorHandle']
+
+            self._discoveredDescriptors.append({
+                'uuid': uuid,
+                'handle': handle
+            })
+
+        self.discover_desc_event.set()
 
     def read_by_handle(self, valueHandle, characteristic, handle=None):
         self.read_data = None
