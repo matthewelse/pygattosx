@@ -21,20 +21,18 @@ from future.builtins import int, bytes
 
 from threading import Event
 
-from .wrapper import BLEBase
+from .wrapper import ble_base
 
-class GATTRequester(BLEBase):
+class GATTRequester():
     def __init__(self, address, connect=False):
-        super(GATTRequester, self).__init__()
-
         self.connected = False
 
-        self.registerEvent(38, self.onConnect)
-        self.registerEvent(40, self.onDisconnect)
-        self.registerEvent(56, self.onDiscover)
-        self.registerEvent(64, self.onDiscoverCharacteristics)
-        self.registerEvent(71, self.onReadResponse)
-        self.registerEvent(79, self.onReadResponse)
+        ble_base.registerEvent(38, self.onConnect)
+        ble_base.registerEvent(40, self.onDisconnect)
+        ble_base.registerEvent(56, self.onDiscover)
+        ble_base.registerEvent(64, self.onDiscoverCharacteristics)
+        ble_base.registerEvent(71, self.onReadResponse)
+        ble_base.registerEvent(79, self.onReadResponse)
 
         self.uuid = address
 
@@ -59,7 +57,7 @@ class GATTRequester(BLEBase):
         }
 
         self.connect_event.clear()
-        self.write(31, connect_data)
+        ble_base.write(31, connect_data)
 
         if block:
             self.connect_event.wait()
@@ -79,7 +77,7 @@ class GATTRequester(BLEBase):
         }
 
         self.disconnection_event.clear()
-        self.write(32, disconnect_data)
+        ble_base.write(32, disconnect_data)
 
         if block:
             self.disconnection_event.wait()
@@ -93,7 +91,7 @@ class GATTRequester(BLEBase):
         }
 
         self.discover_event.clear()
-        self.write(45, discover_data)
+        ble_base.write(45, discover_data)
         self.discover_event.wait()
 
         return self._discoveredServices
@@ -123,7 +121,7 @@ class GATTRequester(BLEBase):
         }
 
         self.discover_event.clear()
-        self.write(62, discover_data)
+        ble_base.write(62, discover_data)
         self.discover_event.wait()
 
         return self._discoveredCharacteristics
@@ -167,7 +165,7 @@ class GATTRequester(BLEBase):
             }
 
         self.read_event.clear()
-        self.write(msg_id, read_data)
+        ble_base.write(msg_id, read_data)
         self.read_event.wait()
 
         return self.read_data

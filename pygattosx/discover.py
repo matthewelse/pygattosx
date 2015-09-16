@@ -24,13 +24,11 @@ import time
 from uuid import UUID
 from collections import defaultdict
 
-from .wrapper import BLEBase
+from .wrapper import ble_base
 
-class DiscoveryService(BLEBase):
+class DiscoveryService():
     def __init__(self, device=None):
-        super(DiscoveryService, self).__init__()
-
-        self.registerEvent(37, self.discoveredDevice)
+        ble_base.registerEvent(37, self.discoveredDevice)
 
         default_dict = {
             'name': '(unknown)',
@@ -74,10 +72,10 @@ class DiscoveryService(BLEBase):
             'kCBMsgArgUUIDs': []
         }
 
-        self.write(29, scan_data)
+        ble_base.write(29, scan_data)
 
     def stopScanning(self):
-        self.write(30, None)
+        ble_base.write(30, None)
 
     def discover(self, timeout):
         self.startScanning()

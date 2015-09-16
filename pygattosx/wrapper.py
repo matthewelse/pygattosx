@@ -107,3 +107,5 @@ class BLEBase(XpcConnection):
         else:
             # que?
             pass
+
+ble_base = BLEBase()
