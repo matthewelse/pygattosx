@@ -70,19 +70,21 @@ class BLEBase(XpcConnection):
         msg_id = data['kCBMsgId']
         args = data['kCBMsgArgs']
 
-        self.schedule(None if msg_id not in self._events else self._events[msg_id], args)
+        self.schedule(msg_id, None if msg_id not in self._events else self._events[msg_id], args)
     
-    def schedule(self, event, args):
-        self.events.append((event, args))
+    def schedule(self, msg_id, event, args):
+        self.events.append((msg_id, event, args))
 
         if not self.event_happening:
             self.mutex.acquire()
 
             for i in range(len(self.events)):
-                event, args = self.events.popleft()
+                msg_id, event, args = self.events.popleft()
 
                 if event is not None:
                     event(args)
+                else:
+                    print("No scheduled event for kCBMsgId%i" % msg_id)
 
             self.mutex.release()
 

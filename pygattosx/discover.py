@@ -20,10 +20,11 @@ from future.utils import bytes_to_native_str, native_str_to_bytes
 from future.builtins import int, bytes
 
 import time
-
+# this is necessary because Mac OS X gives devices UUIDs
 from uuid import UUID
 from collections import defaultdict
 
+from bleep.util import BLEUUID
 from .wrapper import ble_base
 
 class DiscoveryService():
@@ -53,7 +54,12 @@ class DiscoveryService():
         ad_data.update(ads)
 
         name = ad_data['kCBAdvDataLocalName'] or ad_data['kCBMsgArgName']
-        uuids = ad_data['kCBAdvDataServiceUUIDs']
+
+        if ad_data['kCBAdvDataServiceUUIDs'] is not None:
+            uuids = [BLEUUID(bytes(uid)).canonical_str() for uid in ad_data['kCBAdvDataServiceUUIDs'].itervalues()]
+            #print(uuids)
+        else:
+            uuids = None
 
         device = {
             'name': name,
