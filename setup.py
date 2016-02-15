@@ -53,5 +53,5 @@ setup(
         'future',
         'pyxpcconnection'
     ],
-    dependency_links = ['https://github.com/matthewelse/pyxpcconnection/archive/master.zip#egg=xpcconnection']
+    dependency_links = ['https://github.com/matthewelse/pyxpcconnection/archive/master.zip#egg=pyxpcconnection']
 )
